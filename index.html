@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Math Game</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    :root {
+      --red:    #FF4757;
+      --yellow: #FFC312;
+      --green:  #2ED573;
+      --blue:   #1E90FF;
+      --dark:   #2f3542;
+      --bg:     #FAFAFA;
+    }
+
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    /* ─── SCREENS ─── */
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s ease;
+    }
+
+    .screen.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* ─── HOME SCREEN ─── */
+
+    #home {
+      background: var(--blue);
+      gap: 36px;
+      padding: 0 24px;
+      overflow: hidden;
+    }
+
+    /* floating background symbols */
+    .deco {
+      position: absolute;
+      font-weight: 900;
+      color: rgba(255,255,255,0.12);
+      pointer-events: none;
+      animation: float 5s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%,100% { transform: translateY(0) rotate(-5deg); }
+      50%      { transform: translateY(-18px) rotate(5deg); }
+    }
+
+    .title-card {
+      background: white;
+      border-radius: 28px;
+      padding: 20px 40px 16px;
+      text-align: center;
+      box-shadow: 0 10px 0 rgba(0,0,0,0.15);
+      z-index: 1;
+    }
+
+    .title-math {
+      font-size: 72px;
+      font-weight: 900;
+      color: var(--blue);
+      letter-spacing: -3px;
+      line-height: 1;
+    }
+
+    .title-game {
+      font-size: 72px;
+      font-weight: 900;
+      color: var(--red);
+      letter-spacing: -3px;
+      line-height: 1;
+    }
+
+    .title-tag {
+      font-size: 15px;
+      font-weight: 700;
+      color: #aaa;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    .home-sub {
+      font-size: 18px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.88);
+      text-align: center;
+      z-index: 1;
+      line-height: 1.5;
+    }
+
+    .btn-start {
+      background: var(--yellow);
+      color: var(--dark);
+      border: none;
+      border-radius: 60px;
+      padding: 20px 72px;
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      cursor: pointer;
+      box-shadow: 0 8px 0 rgba(0,0,0,0.18);
+      transition: transform 0.07s, box-shadow 0.07s;
+      z-index: 1;
+    }
+    .btn-start:active {
+      transform: translateY(5px);
+      box-shadow: 0 3px 0 rgba(0,0,0,0.18);
+    }
+
+    /* ─── GAME SCREEN ─── */
+
+    #game {
+      background: var(--bg);
+      justify-content: flex-start;
+      align-items: stretch;
+    }
+
+    .game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: max(env(safe-area-inset-top), 18px) 22px 10px;
+      flex-shrink: 0;
+    }
+
+    .timer-num {
+      font-size: 54px;
+      font-weight: 900;
+      color: var(--dark);
+      min-width: 72px;
+      transition: color 0.3s;
+    }
+    .timer-num.low { color: var(--red); }
+
+    .score-pill {
+      background: var(--yellow);
+      color: var(--dark);
+      border-radius: 30px;
+      padding: 8px 20px;
+      font-size: 21px;
+      font-weight: 800;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+    }
+
+    .progress-track {
+      width: calc(100% - 44px);
+      margin: 0 22px 0;
+      height: 10px;
+      background: #E5E5E5;
+      border-radius: 10px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 100%;
+      background: var(--green);
+      border-radius: 10px;
+      transition: width 1s linear, background-color 0.4s;
+    }
+    .progress-fill.low { background: var(--red); }
+
+    .question-zone {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      padding: 0 24px;
+      min-height: 0;
+    }
+
+    .question-expr {
+      font-size: 60px;
+      font-weight: 900;
+      color: var(--dark);
+      text-align: center;
+      letter-spacing: -1px;
+    }
+
+    .answer-box {
+      background: white;
+      border: 4px solid #DEDEDE;
+      border-radius: 22px;
+      padding: 10px 28px;
+      font-size: 54px;
+      font-weight: 900;
+      color: var(--blue);
+      min-width: 180px;
+      min-height: 82px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .answer-box.wrong {
+      border-color: var(--red);
+      background: #FFF0F0;
+      animation: shake 0.3s ease-out;
+    }
+    @keyframes shake {
+      0%   { transform: translateX(0); }
+      20%  { transform: translateX(-10px); }
+      40%  { transform: translateX(10px); }
+      60%  { transform: translateX(-7px); }
+      80%  { transform: translateX(7px); }
+      100% { transform: translateX(0); }
+    }
+
+    .answer-cursor {
+      display: inline-block;
+      width: 3px;
+      height: 50px;
+      background: var(--blue);
+      margin-left: 3px;
+      vertical-align: middle;
+      border-radius: 2px;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0; }
+    }
+
+    /* ─── NUMPAD ─── */
+
+    .numpad {
+      flex-shrink: 0;
+      background: white;
+      border-top: 2px solid #EBEBEB;
+      padding: 12px 16px;
+      padding-bottom: max(env(safe-area-inset-bottom), 16px);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .key {
+      border: none;
+      border-radius: 14px;
+      font-size: 30px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 66px;
+      transition: transform 0.07s, box-shadow 0.07s;
+    }
+    .key:active {
+      transform: translateY(3px);
+      box-shadow: none !important;
+    }
+
+    .key-num {
+      background: #F2F2F7;
+      color: var(--dark);
+      box-shadow: 0 4px 0 #D8D8D8;
+    }
+
+    .key-del {
+      background: #FFE8E8;
+      color: var(--red);
+      box-shadow: 0 4px 0 #FFBBBB;
+      font-size: 26px;
+    }
+
+    .key-ok {
+      background: var(--green);
+      color: white;
+      box-shadow: 0 4px 0 #1DAA56;
+      font-size: 30px;
+    }
+
+    /* ─── END SCREEN ─── */
+
+    #end {
+      background: linear-gradient(155deg, #5352ED, #2C2C8A);
+      gap: 28px;
+      padding: 0 28px;
+    }
+
+    .end-title {
+      font-size: 38px;
+      font-weight: 900;
+      color: white;
+      text-align: center;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.18);
+    }
+
+    .score-card {
+      background: white;
+      border-radius: 28px;
+      padding: 22px 52px;
+      text-align: center;
+      box-shadow: 0 10px 0 rgba(0,0,0,0.18);
+    }
+
+    .score-label {
+      font-size: 15px;
+      font-weight: 700;
+      color: #aaa;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .score-big {
+      font-size: 104px;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--blue);
+    }
+
+    .end-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: min(310px, 88vw);
+    }
+
+    .btn-replay {
+      background: var(--yellow);
+      color: var(--dark);
+      border: none;
+      border-radius: 60px;
+      padding: 19px;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 7px 0 rgba(0,0,0,0.18);
+      transition: transform 0.07s, box-shadow 0.07s;
+    }
+    .btn-replay:active {
+      transform: translateY(4px);
+      box-shadow: 0 3px 0 rgba(0,0,0,0.18);
+    }
+
+    .btn-home {
+      background: rgba(255,255,255,0.18);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.38);
+      border-radius: 60px;
+      padding: 17px;
+      font-size: 20px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .btn-home:active { background: rgba(255,255,255,0.28); }
+  </style>
+</head>
+<body ontouchstart="">
+
+<!-- ═══════════ HOME ═══════════ -->
+<div id="home" class="screen active">
+
+  <!-- decorative floating symbols -->
+  <span class="deco" style="font-size:56px;top:7%;left:8%;animation-delay:0s">+</span>
+  <span class="deco" style="font-size:48px;top:12%;right:10%;animation-delay:1.2s">×</span>
+  <span class="deco" style="font-size:52px;top:52%;left:4%;animation-delay:2.1s">−</span>
+  <span class="deco" style="font-size:44px;top:65%;right:6%;animation-delay:0.7s">÷</span>
+  <span class="deco" style="font-size:36px;top:38%;left:16%;animation-delay:1.8s">7</span>
+  <span class="deco" style="font-size:32px;bottom:18%;right:18%;animation-delay:2.8s">42</span>
+  <span class="deco" style="font-size:38px;bottom:30%;left:12%;animation-delay:3.3s">=</span>
+
+  <div class="title-card">
+    <div class="title-math">MATH</div>
+    <div class="title-game">GAME</div>
+    <div class="title-tag">Speed Challenge</div>
+  </div>
+
+  <div class="home-sub">60 seconds &middot; answer as many<br>math questions as you can!</div>
+
+  <button class="btn-start" onclick="startGame()">START</button>
+</div>
+
+
+<!-- ═══════════ GAME ═══════════ -->
+<div id="game" class="screen">
+
+  <div class="game-header">
+    <div class="timer-num" id="timerNum">60</div>
+    <div class="score-pill">Score:&nbsp;<span id="scoreNum">0</span></div>
+  </div>
+
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+
+  <div class="question-zone">
+    <div class="question-expr" id="questionExpr"></div>
+    <div class="answer-box" id="answerBox">
+      <span id="answerText">_</span>
+    </div>
+  </div>
+
+  <div class="numpad" id="numpad">
+    <button class="key key-num" data-action="tap" data-val="7">7</button>
+    <button class="key key-num" data-action="tap" data-val="8">8</button>
+    <button class="key key-num" data-action="tap" data-val="9">9</button>
+    <button class="key key-num" data-action="tap" data-val="4">4</button>
+    <button class="key key-num" data-action="tap" data-val="5">5</button>
+    <button class="key key-num" data-action="tap" data-val="6">6</button>
+    <button class="key key-num" data-action="tap" data-val="1">1</button>
+    <button class="key key-num" data-action="tap" data-val="2">2</button>
+    <button class="key key-num" data-action="tap" data-val="3">3</button>
+    <button class="key key-del" data-action="del">&#9003;</button>
+    <button class="key key-num" data-action="tap" data-val="0">0</button>
+    <button class="key key-ok"  data-action="submit">&#10003;</button>
+  </div>
+</div>
+
+
+<!-- ═══════════ END ═══════════ -->
+<div id="end" class="screen">
+  <div class="end-title">Time&rsquo;s Up!</div>
+
+  <div class="score-card">
+    <div class="score-label">Your Score</div>
+    <div class="score-big" id="endScore">0</div>
+  </div>
+
+  <div class="end-btns">
+    <button class="btn-replay" onclick="startGame()">PLAY AGAIN</button>
+    <button class="btn-home"   onclick="goHome()">Home</button>
+  </div>
+</div>
+
+
+<script>
+/* ═══════════════════════════════
+   STATE
+═══════════════════════════════ */
+let question = null;   // { text, answer, key }
+let used     = new Set();
+let score    = 0;
+let secs     = 60;
+let ticker   = null;
+let input    = '';
+let audioCtx = null;
+
+/* ═══════════════════════════════
+   AUDIO  (Web Audio API)
+═══════════════════════════════ */
+function getAC() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioCtx;
+}
+
+function beep(freq, type, dur, vol) {
+  try {
+    var ctx = getAC();
+    var o   = ctx.createOscillator();
+    var g   = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    o.start();
+    o.stop(ctx.currentTime + dur);
+  } catch(e) {}
+}
+
+function playWrong() {
+  beep(160, 'square', 0.13, 0.28);
+}
+
+function playRight() {
+  beep(520, 'sine', 0.09, 0.22);
+  setTimeout(function(){ beep(660, 'sine', 0.13, 0.20); }, 85);
+}
+
+/* ═══════════════════════════════
+   QUESTION GENERATION
+═══════════════════════════════ */
+function rnd(a, b) {
+  return Math.floor(Math.random() * (b - a + 1)) + a;
+}
+
+function makeQuestion() {
+  var ops = ['+', '\u2212', '\u00D7', '\u00F7'];
+  var op  = ops[rnd(0, 3)];
+  var a, b, ans;
+
+  if (op === '+') {
+    a = rnd(1, 50);
+    b = rnd(1, 50);
+    ans = a + b;
+
+  } else if (op === '\u2212') {        // −
+    a = rnd(10, 99);
+    b = rnd(1, a - 1);
+    ans = a - b;
+
+  } else if (op === '\u00D7') {        // ×
+    a = rnd(2, 12);
+    b = rnd(2, 12);
+    ans = a * b;
+
+  } else {                             // ÷
+    b   = rnd(2, 9);
+    ans = rnd(2, Math.floor(99 / b));
+    a   = ans * b;
+  }
+
+  return { text: a + ' ' + op + ' ' + b, answer: ans, key: a + op + b };
+}
+
+function nextQuestion() {
+  var q, tries = 0;
+  do {
+    q = makeQuestion();
+    if (++tries > 500) used.clear();
+  } while (used.has(q.key));
+  used.add(q.key);
+  return q;
+}
+
+/* ═══════════════════════════════
+   SCREEN SWITCHING
+═══════════════════════════════ */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(function(s) {
+    s.classList.remove('active');
+  });
+  document.getElementById(id).classList.add('active');
+}
+
+function goHome() {
+  clearInterval(ticker);
+  show('home');
+}
+
+/* ═══════════════════════════════
+   GAME FLOW
+═══════════════════════════════ */
+function startGame() {
+  score = 0;
+  secs  = 60;
+  input = '';
+  used.clear();
+
+  refreshScore();
+  refreshTimer();
+  show('game');
+
+  question = nextQuestion();
+  renderQuestion();
+
+  clearInterval(ticker);
+  ticker = setInterval(tick, 1000);
+}
+
+function tick() {
+  secs--;
+  refreshTimer();
+  if (secs <= 0) endGame();
+}
+
+function refreshTimer() {
+  var el   = document.getElementById('timerNum');
+  var fill = document.getElementById('progressFill');
+  var low  = secs <= 10;
+
+  el.textContent = secs;
+  el.className   = 'timer-num' + (low ? ' low' : '');
+  fill.style.width  = (secs / 60 * 100) + '%';
+  fill.className    = 'progress-fill' + (low ? ' low' : '');
+}
+
+function refreshScore() {
+  document.getElementById('scoreNum').textContent = score;
+}
+
+function renderQuestion() {
+  document.getElementById('questionExpr').textContent = question.text + ' =';
+  input = '';
+  renderInput();
+  document.getElementById('answerBox').className = 'answer-box';
+}
+
+function renderInput() {
+  document.getElementById('answerText').textContent = input || '_';
+}
+
+/* ─── NUMPAD HANDLERS ─── */
+function tap(digit) {
+  if (input.length >= 4) return;
+  input += digit;
+  renderInput();
+}
+
+function del() {
+  if (!input.length) return;
+  input = input.slice(0, -1);
+  renderInput();
+  document.getElementById('answerBox').className = 'answer-box';
+}
+
+function submit() {
+  if (!input) return;
+
+  var val = parseInt(input, 10);
+
+  if (val === question.answer) {
+    playRight();
+    score++;
+    refreshScore();
+    question = nextQuestion();
+    renderQuestion();
+  } else {
+    playWrong();
+    var box = document.getElementById('answerBox');
+    box.className = 'answer-box wrong';
+    box.addEventListener('animationend', function() {
+      box.className = 'answer-box';
+    }, { once: true });
+    input = '';
+    renderInput();
+  }
+}
+
+/* ─── FAST-TAP: touchstart fires immediately, no 300ms wait ─── */
+(function () {
+  var numpad = document.getElementById('numpad');
+  var touchHandled = false;
+
+  function handleKey(btn) {
+    var action = btn.getAttribute('data-action');
+    if (action === 'tap')    tap(btn.getAttribute('data-val'));
+    else if (action === 'del')    del();
+    else if (action === 'submit') submit();
+  }
+
+  numpad.addEventListener('touchstart', function (e) {
+    var btn = e.target.closest('.key');
+    if (!btn) return;
+    e.preventDefault();   // stops the delayed synthetic click
+    touchHandled = true;
+    handleKey(btn);
+  }, { passive: false });
+
+  // click fallback for desktop / non-touch
+  numpad.addEventListener('click', function (e) {
+    if (touchHandled) { touchHandled = false; return; }
+    var btn = e.target.closest('.key');
+    if (btn) handleKey(btn);
+  });
+}());
+
+function endGame() {
+  clearInterval(ticker);
+  document.getElementById('endScore').textContent = score;
+  show('end');
+}
+</script>
+</body>
+</html>
