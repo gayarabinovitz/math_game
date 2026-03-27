@@ -1,1 +1,1 @@
-online speed math game built entirely with claudecode 
+online speed math game built with claudecode 
